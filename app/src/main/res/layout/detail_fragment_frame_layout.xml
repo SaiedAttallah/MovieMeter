@@ -1,0 +1,117 @@
+<FrameLayout
+    android:id="@+id/detail_container"
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    tools:context="com.example.titos.moviesapp.DetailFragment">
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#ffffff"
+        android:fillViewport="true">
+
+        <LinearLayout
+            android:orientation="vertical"
+            android:layout_width="match_parent"
+            android:background="#4052b5"
+            android:layout_height="match_parent">
+            <TextView
+                android:textStyle="bold"
+                android:id="@+id/detailMovieName"
+                android:padding="30dp"
+                android:textSize="28sp"
+                android:background="#4052b5"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Movie Name"
+                android:textColor="#ffffff"
+                android:layout_alignParentTop="true"
+                android:layout_alignParentLeft="true"
+                android:layout_alignParentStart="true" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal">
+                <ImageView
+                    android:src="@drawable/preview"
+                    android:id="@+id/detailMovieImage"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="200dp"
+                    android:layout_below="@+id/detailMovieName"
+                    android:layout_alignLeft="@+id/detailMovieOverview"
+                    android:layout_alignStart="@+id/detailMovieOverview" />
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:orientation="vertical"
+                    android:layout_height="wrap_content">
+                    <TextView
+                        android:id="@+id/detailMovieReleaseDate"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="2016"
+                        android:textColor="#ffff"
+                        android:textSize="20sp"
+                        android:layout_gravity="center_horizontal" />
+
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textAppearance="?android:attr/textAppearanceMedium"
+                        android:text="min"
+                        android:id="@+id/detailMovieVote_average"
+                        android:textColor="#ffff"
+                        android:textSize="20sp"
+                        android:layout_alignBottom="@+id/detailMovieFavorite"
+                        android:layout_alignLeft="@+id/detailMovieFavorite"
+                        android:layout_alignStart="@+id/detailMovieFavorite"
+                        android:layout_gravity="center_horizontal" />
+
+                    <Button
+                        android:layout_width="120dp"
+                        android:layout_height="55dp"
+                        android:text="Add To Favorite"
+                        android:id="@+id/detailMovieFavorite"
+                        android:layout_alignBaseline="@+id/detailMovieOverview"
+                        android:layout_alignBottom="@+id/detailMovieOverview"
+                        android:layout_alignParentRight="true"
+                        android:layout_alignParentEnd="true" />
+
+
+                </LinearLayout>
+            </LinearLayout>
+            <TextView
+                android:layout_marginLeft="5dp"
+                android:textColor="#ffff"
+                android:id="@+id/detailMovieOverview"
+                android:layout_marginTop="10dp"
+                android:layout_below="@+id/detailMovieImage"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="overview"
+                android:textSize="20sp"
+                />
+            <LinearLayout
+                android:layout_marginTop="10dp"
+                android:orientation="vertical"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content">
+                <ListView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:id="@+id/Trialerlist">
+
+                </ListView>
+
+            </LinearLayout>
+
+
+        </LinearLayout>
+
+    </ScrollView>
+
+</FrameLayout>
