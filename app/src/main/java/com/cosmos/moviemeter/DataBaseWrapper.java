@@ -10,47 +10,33 @@ import android.database.sqlite.SQLiteOpenHelper;
 
 public class DataBaseWrapper extends SQLiteOpenHelper {
 
-    public static final String Movies = "Movies";
-    public static final String Movie_POSTER_URL = "posterURL";
-    public static final String Movie_ID = "id";
-    public static final String Movie_TITLE = "title";
-    public static final String Movie_DATE = "date";
-    public static final String Movie_OVERVIEW = "overview";
-    public static final String Movie_RATE = "rate";
-    public static final String Movie_FAVORITES = "favorite";
-    private static final String DATABASE_NAME = "Movies.db";
-
     private static final int DATABASE_VERSION = 1;
-    private static final String DATABASE_CREATE = "create table " + Movies
 
-            + "(" + Movie_ID + " text primary key , "
-            + Movie_TITLE + " text not null , "
-            + Movie_POSTER_URL + " text not null, "
-            + Movie_DATE + " text not null, "
-            + Movie_RATE + " text not null, "
-            + Movie_OVERVIEW + " text not null, "
-            + Movie_FAVORITES + " boolean );" ;
+    static final String DATABASE_NAME = "movie.db";
 
     public DataBaseWrapper(Context context) {
-
         super(context, DATABASE_NAME, null, DATABASE_VERSION);
-
     }
 
     @Override
     public void onCreate(SQLiteDatabase db) {
-        db.execSQL(DATABASE_CREATE);
+        final String SQL_CREATE_MOVIE_TABLE = "CREATE TABLE " + MovieContract.MovieEntry.TABLE_NAME + " (" +
+                MovieContract.MovieEntry._ID + " INTEGER PRIMARY KEY AUTOINCREMENT, " +
+                MovieContract.MovieEntry.COLUMN_MOVIE_ID + " INTEGER NOT NULL, " +
+                MovieContract.MovieEntry.COLUMN_TITLE + " TEXT NOT NULL, " +
+                MovieContract.MovieEntry.COLUMN_IMAGE + " TEXT, " +
+                MovieContract.MovieEntry.COLUMN_IMAGE2 + " TEXT, " +
+                MovieContract.MovieEntry.COLUMN_OVERVIEW + " TEXT, " +
+                MovieContract.MovieEntry.COLUMN_RATING + " INTEGER, " +
+                MovieContract.MovieEntry.COLUMN_DATE + " TEXT);";
 
+        db.execSQL(SQL_CREATE_MOVIE_TABLE);
     }
 
     @Override
-
     public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-
-        db.execSQL("DROP TABLE IF EXISTS " + Movies);
-
+        db.execSQL("DROP TABLE IF EXISTS " + MovieContract.MovieEntry.TABLE_NAME);
         onCreate(db);
-
     }
 
 }

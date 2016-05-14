@@ -13,18 +13,17 @@ import com.bumptech.glide.Glide;
 import java.util.List;
 
 /**
- * Created by Saied Attallah on 4/22/2016.
+ * Created by Saied Attallah on 5/13/2016.
  */
-public class ImageAdapter extends BaseAdapter {
+public class TrailerAdapter extends BaseAdapter {
 
     private final Context mContext;
     private final LayoutInflater mInflater;
+    private final TrailerDetails mLock = new TrailerDetails();
 
-    private final MovieDetails mLock = new MovieDetails();
+    private List<TrailerDetails> mObjects;
 
-    private List<MovieDetails> mObjects;
-
-    public ImageAdapter(Context context, List<MovieDetails> objects) {
+    public TrailerAdapter(Context context, List<TrailerDetails> objects) {
         mContext = context;
         mInflater = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
         mObjects = objects;
@@ -34,7 +33,7 @@ public class ImageAdapter extends BaseAdapter {
         return mContext;
     }
 
-    public void add(MovieDetails object) {
+    public void add(TrailerDetails object) {
         synchronized (mLock) {
             mObjects.add(object);
         }
@@ -48,20 +47,13 @@ public class ImageAdapter extends BaseAdapter {
         notifyDataSetChanged();
     }
 
-    public void setData(List<MovieDetails> data) {
-        clear();
-        for (MovieDetails movie : data) {
-            add(movie);
-        }
-    }
-
     @Override
     public int getCount() {
         return mObjects.size();
     }
 
     @Override
-    public MovieDetails getItem(int position) {
+    public TrailerDetails getItem(int position) {
         return mObjects.get(position);
     }
 
@@ -76,30 +68,30 @@ public class ImageAdapter extends BaseAdapter {
         ViewHolder viewHolder;
 
         if (view == null) {
-            view = mInflater.inflate(R.layout.movie_image_view, parent, false);
+            view = mInflater.inflate(R.layout.trailer_item, parent, false);
             viewHolder = new ViewHolder(view);
             view.setTag(viewHolder);
         }
 
-        final MovieDetails movieDetails = getItem(position);
-
-        String image_url = "http://image.tmdb.org/t/p/w185" + movieDetails.getImage();
+        final TrailerDetails trailerDetails = getItem(position);
 
         viewHolder = (ViewHolder) view.getTag();
 
-        Glide.with(getContext()).load(image_url).into(viewHolder.imageView);
-        viewHolder.titleView.setText(movieDetails.getTitle());
+        String yt_thumbnail_url = "http://img.youtube.com/vi/" + trailerDetails.getKey() + "/0.jpg";
+        Glide.with(getContext()).load(yt_thumbnail_url).into(viewHolder.imageView);
+
+        viewHolder.nameView.setText(trailerDetails.getName());
 
         return view;
     }
 
     public static class ViewHolder {
         public final ImageView imageView;
-        public final TextView titleView;
+        public final TextView nameView;
 
         public ViewHolder(View view) {
-            imageView = (ImageView) view.findViewById(R.id.grid_item_image);
-            titleView = (TextView) view.findViewById(R.id.grid_item_title);
+            imageView = (ImageView) view.findViewById(R.id.trailer_image);
+            nameView = (TextView) view.findViewById(R.id.trailer_name);
         }
     }
 }

@@ -2,24 +2,23 @@ package com.cosmos.moviemeter;
 
 
 import android.content.Context;
-import android.content.Intent;
-import android.content.SharedPreferences;
+import android.database.Cursor;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
-import android.preference.PreferenceManager;
-import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
 import android.util.Log;
 import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.AdapterView;
 import android.widget.GridView;
-import android.widget.Toast;
 
 import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.BufferedReader;
@@ -27,10 +26,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
 import java.net.URL;
-import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.List;
 
 
 /**
@@ -38,232 +36,318 @@ import java.util.ArrayList;
  */
 public class MoviesFragment extends Fragment {
 
-    GridView gridView;
-    static boolean large = false;
-    ArrayList<String> moviePosters;
+    private GridView mGridView;
 
-    private MovieDao movieDao;
-    SharedPreferences sharedPreferences;
-    String choice;
+    private ImageAdapter mMovieGridAdapter;
 
+    private static final String SORT_SETTING_KEY = "sort_setting";
+    private static final String POPULARITY_DESC = "popularity.desc";
+    private static final String RATING_DESC = "vote_average.desc";
+    private static final String FAVORITE = "favorite";
+    private static final String MOVIES_KEY = "movies";
+
+    private String mSortBy = POPULARITY_DESC;
+
+    private ArrayList<MovieDetails> mMovies = null;
+
+    private static final String[] MOVIE_COLUMNS = {
+            MovieContract.MovieEntry._ID,
+            MovieContract.MovieEntry.COLUMN_MOVIE_ID,
+            MovieContract.MovieEntry.COLUMN_TITLE,
+            MovieContract.MovieEntry.COLUMN_IMAGE,
+            MovieContract.MovieEntry.COLUMN_IMAGE2,
+            MovieContract.MovieEntry.COLUMN_OVERVIEW,
+            MovieContract.MovieEntry.COLUMN_RATING,
+            MovieContract.MovieEntry.COLUMN_DATE
+    };
+
+    public static final int COL_ID = 0;
+    public static final int COL_MOVIE_ID = 1;
+    public static final int COL_TITLE = 2;
+    public static final int COL_IMAGE = 3;
+    public static final int COL_IMAGE2 = 4;
+    public static final int COL_OVERVIEW = 5;
+    public static final int COL_RATING = 6;
+    public static final int COL_DATE = 7;
+
+    public MoviesFragment() {
+    }
+
+    /**
+     * A callback interface that all activities containing this fragment must
+     * implement. This mechanism allows activities to be notified of item
+     * selections.
+     */
+    public interface Callback {
+        void onItemSelected(MovieDetails movie);
+    }
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         // Add this line in order for this fragment to handle menu events.
         setHasOptionsMenu(true);
-        movieDao = new MovieDao(getActivity());
-        try {
-            movieDao.open();
-        } catch (SQLException e) {
-            e.printStackTrace();
+    }
+
+    @Override
+    public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
+        inflater.inflate(R.menu.menu_main, menu);
+
+        MenuItem action_sort_by_popularity = menu.findItem(R.id.action_sort_by_popularity);
+        MenuItem action_sort_by_rating = menu.findItem(R.id.action_sort_by_rating);
+        MenuItem action_sort_by_favorite = menu.findItem(R.id.action_sort_by_favorite);
+
+        if (mSortBy.contentEquals(POPULARITY_DESC)) {
+            if (!action_sort_by_popularity.isChecked()) {
+                action_sort_by_popularity.setChecked(true);
+            }
+        } else if (mSortBy.contentEquals(RATING_DESC)) {
+            if (!action_sort_by_rating.isChecked()) {
+                action_sort_by_rating.setChecked(true);
+            }
+        } else if (mSortBy.contentEquals(FAVORITE)) {
+            if (!action_sort_by_popularity.isChecked()) {
+                action_sort_by_favorite.setChecked(true);
+            }
         }
     }
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
         int id = item.getItemId();
-        if (id == R.id.action_settings) {
-            startActivity(new Intent(getActivity(), SettingsActivity.class));
-
+        switch (id) {
+            case R.id.action_sort_by_popularity:
+                if (item.isChecked()) {
+                    item.setChecked(false);
+                } else {
+                    item.setChecked(true);
+                }
+                mSortBy = POPULARITY_DESC;
+                updateMovies(mSortBy);
+                return true;
+            case R.id.action_sort_by_rating:
+                if (item.isChecked()) {
+                    item.setChecked(false);
+                } else {
+                    item.setChecked(true);
+                }
+                mSortBy = RATING_DESC;
+                updateMovies(mSortBy);
+                return true;
+            case R.id.action_sort_by_favorite:
+                if (item.isChecked()) {
+                    item.setChecked(false);
+                } else {
+                    item.setChecked(true);
+                }
+                mSortBy = FAVORITE;
+                updateMovies(mSortBy);
+                return true;
+            default:
+                return super.onOptionsItemSelected(item);
         }
-        return super.onOptionsItemSelected(item);
     }
 
-    @Nullable
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
 
-        View rootView = inflater.inflate(R.layout.fragment_movies, container, false);
+        View view = inflater.inflate(R.layout.fragment_movies, container, false);
 
-        gridView = (GridView) rootView.findViewById(R.id.girdView);
+        mGridView = (GridView) view.findViewById(R.id.gridView);
 
-        getMovies();
-        Toast.makeText(getActivity(), "Yesssssssss!", Toast.LENGTH_SHORT).show();
-        return rootView;
+        mMovieGridAdapter = new ImageAdapter(getActivity(), new ArrayList<MovieDetails>());
+
+        mGridView.setAdapter(mMovieGridAdapter);
+
+        mGridView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
+                MovieDetails movie = mMovieGridAdapter.getItem(position);
+                ((Callback) getActivity()).onItemSelected(movie);
+            }
+        });
+
+        if (savedInstanceState != null) {
+            if (savedInstanceState.containsKey(SORT_SETTING_KEY)) {
+                mSortBy = savedInstanceState.getString(SORT_SETTING_KEY);
+            }
+
+            if (savedInstanceState.containsKey(MOVIES_KEY)) {
+                mMovies = savedInstanceState.getParcelableArrayList(MOVIES_KEY);
+                mMovieGridAdapter.setData(mMovies);
+            } else {
+                updateMovies(mSortBy);
+            }
+        } else {
+            updateMovies(mSortBy);
+        }
+
+        return view;
+    }
+
+    private void updateMovies(String sort_by) {
+        if (!sort_by.contentEquals(FAVORITE)) {
+            new FetchMoviesTask().execute(sort_by);
+        } else {
+            new FetchFavoriteMoviesTask(getActivity()).execute();
+        }
     }
 
     @Override
-    public void onStart() {
-        super.onStart();
+    public void onSaveInstanceState(Bundle outState) {
+        if (!mSortBy.contentEquals(POPULARITY_DESC)) {
+            outState.putString(SORT_SETTING_KEY, mSortBy);
+        }
+        if (mMovies != null) {
+            outState.putParcelableArrayList(MOVIES_KEY, mMovies);
+        }
+        super.onSaveInstanceState(outState);
     }
 
-//    void update() {
-//        MainPostersAsyncTask MainPostersAsyncTask = new MainPostersAsyncTask(getActivity(), gridView);
-//        MainPostersAsyncTask.execute();
-//
-//    }
+    public class FetchMoviesTask extends AsyncTask<String, Void, List<MovieDetails>> {
 
+        private final String LOG_TAG = FetchMoviesTask.class.getSimpleName();
 
+        private List<MovieDetails> getMoviesDataFromJson(String jsonStr) throws JSONException {
+            JSONObject movieJson = new JSONObject(jsonStr);
+            JSONArray movieArray = movieJson.getJSONArray("results");
 
+            List<MovieDetails> results = new ArrayList<>();
 
-    void getMovies() {
-        sharedPreferences = PreferenceManager.getDefaultSharedPreferences(getActivity());
-        choice = sharedPreferences.getString("sorting", "");
+            for(int i = 0; i < movieArray.length(); i++) {
+                JSONObject movie = movieArray.getJSONObject(i);
+                MovieDetails movieDetailsModel = new MovieDetails(movie);
+                results.add(movieDetailsModel);
+            }
 
-        if (choice.equals("Favourite")){
-            ArrayList<MovieDetails> movieDetailsArrayList = movieDao.getFavoritesMovies();
-            gridView.setAdapter(new ImageAdapter(getActivity(), R.layout.movie_image_view, movieDetailsArrayList));
-        }
-        else {
-            MainPostersAsyncTask mainPostersAsyncTask = new MainPostersAsyncTask(getActivity(), gridView);
-            mainPostersAsyncTask.execute();
-        }
-
-    }
-
-
-
-//    @Override
-//    public void onStop() {
-//        super.onStop();
-//
-//    }
-
-    class MainPostersAsyncTask extends AsyncTask<Void, Void, ArrayList<MovieDetails>> {
-        Context context;
-        GridView secondGird;
-        ArrayList<MovieDetails> movieDetailsArrayList;
-
-        public MainPostersAsyncTask(Context con, GridView firstGrid) {
-            context = con;
-            secondGird = firstGrid;
+            return results;
         }
 
         @Override
-        protected void onPreExecute() {
-            //super.onPreExecute();
-        }
+        protected List<MovieDetails> doInBackground(String... params) {
 
-        @Override
-        protected ArrayList<MovieDetails> doInBackground(Void... params) {
+            if (params.length == 0) {
+                return null;
+            }
+
             HttpURLConnection urlConnection = null;
-            String base_string;
-
-            SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(getActivity());
-
-            String choice = sharedPreferences.getString(
-                    getString(R.string.pref_sorting_key),
-                    getString(R.string.pref_sorting_most_popular));
-            base_string = "https://api.themoviedb.org/3/movie/popular?";
-
-            if (choice.equals(getString(R.string.pref_sorting_top_rated))) {
-                base_string = "https://api.themoviedb.org/3/movie/top_rated?";
-            }
-
-
             BufferedReader reader = null;
-            String posterJson = "";
-            URL url = null;
 
-            Uri uri = Uri.parse(base_string).buildUpon()
-                    .appendQueryParameter("api_key", "").build();
+            String jsonStr = null;
 
             try {
-                url = new URL(uri.toString());
+                final String BASE_URL = "http://api.themoviedb.org/3/discover/movie?";
+                final String SORT_BY_PARAM = "sort_by";
+                final String API_KEY_PARAM = "api_key";
 
-            } catch (MalformedURLException e) {
-                e.printStackTrace();
-            }
+                Uri builtUri = Uri.parse(BASE_URL).buildUpon()
+                        .appendQueryParameter(SORT_BY_PARAM, params[0])
+                        .appendQueryParameter(API_KEY_PARAM, getString(R.string.tmdb_api_key))
+                        .build();
 
+                URL url = new URL(builtUri.toString());
 
-            try {
-//               url= new URL("https://");
                 urlConnection = (HttpURLConnection) url.openConnection();
                 urlConnection.setRequestMethod("GET");
                 urlConnection.connect();
-            } catch (IOException e) {
-                //  Toast.makeText(c1,e.getMessage(),Toast.LENGTH_SHORT).show();
-            }
 
-            try {
-                InputStream streamReader = urlConnection.getInputStream();
-                if (streamReader == null) {
+                InputStream inputStream = urlConnection.getInputStream();
+                StringBuffer buffer = new StringBuffer();
+                if (inputStream == null) {
                     return null;
                 }
+                reader = new BufferedReader(new InputStreamReader(inputStream));
 
-                reader = new BufferedReader(new InputStreamReader(streamReader));
                 String line;
                 while ((line = reader.readLine()) != null) {
-                    posterJson += line;
-                    Log.v("hi", line);
+
+                    buffer.append(line + "\n");
                 }
-                //Toast.makeText(c1,"size "+String.valueOf(posterJson.length()),Toast.LENGTH_SHORT).show();
-                JSONObject jsonObject = new JSONObject(posterJson);
-                JSONArray arrayJ = jsonObject.getJSONArray("results");
-                movieDetailsArrayList = new ArrayList<MovieDetails>();
-                for (int i = 0; i < arrayJ.length(); i++) {
-                    JSONObject movieJsonObject = arrayJ.getJSONObject(i);
-                    String PP = new String("http://image.tmdb.org/t/p/w185");
-                    PP = PP + movieJsonObject.getString("poster_path");
-                    String original_title = movieJsonObject.getString("original_title");
-                    String overview = movieJsonObject.getString("overview");
-                    String release_date = movieJsonObject.getString("release_date");
-                    String vote_average = movieJsonObject.getString("vote_average");
-                    String id = movieJsonObject.getString("id");
 
-                    MovieDetails movieDetails = new MovieDetails(vote_average,release_date,overview,original_title,id,posterJson);
-
-                    movieDetailsArrayList.add(movieDetails);
-
+                if (buffer.length() == 0) {
+                    return null;
                 }
-                return movieDetailsArrayList;
-
-            } catch (Exception e) {
+                jsonStr = buffer.toString();
+            } catch (IOException e) {
+                Log.e(LOG_TAG, "Error ", e);
                 return null;
-                // Toast.makeText(c1,e.getMessage(),Toast.LENGTH_SHORT).show();
             } finally {
                 if (urlConnection != null) {
                     urlConnection.disconnect();
                 }
-                if (reader != null)
+                if (reader != null) {
                     try {
                         reader.close();
-                    } catch (IOException e) {
-                        Log.e("BufferReaderIOException", "Error closing stream", e);
+                    } catch (final IOException e) {
+                        Log.e(LOG_TAG, "Error closing stream", e);
                     }
-
+                }
             }
 
+            try {
+                return getMoviesDataFromJson(jsonStr);
+            } catch (JSONException e) {
+                Log.e(LOG_TAG, e.getMessage(), e);
+                e.printStackTrace();
+            }
+
+            return null;
         }
 
         @Override
-        protected void onPostExecute(ArrayList<MovieDetails> strings) {
-            final ImageAdapter imageAdapter= new ImageAdapter(context, R.layout.movie_image_view, strings);
-            secondGird.setAdapter(imageAdapter);
-            secondGird.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-                @Override
-                public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
-                    MovieDetails movieDetails = imageAdapter.getItem(position);
-                    String[] ty = new String[6];
-                    String title = movieDetails.getOriginalTitle();
-                    String poster = movieDetails.getPosterPath();
-                    String date = movieDetails.getReleaseDate();
-                    String vote = movieDetails.getVoteAverage();
-                    String over = movieDetails.getMovieOverview();
-                    String Id = movieDetails.getMovieId();
-
-                    String [] movieData = new String[6];
-                    ty[0] = title;
-                    ty[1] = poster;
-                    ty[2] = over;
-                    ty[3] = date;
-                    ty[4] = Id;
-                    ty[5] = vote;
-                    if (!large) {
-                        Intent intent = new Intent(getActivity(), DetailFragment.class);
-                        intent.putExtra("data", ty);
-//                    intent.putExtra("poster_url",poster);
-                        startActivity(intent);
-                    } else {
-                        MainActivity.getMovieData(movieData);
-                    }
+        protected void onPostExecute(List<MovieDetails> movies) {
+            if (movies != null) {
+                if (mMovieGridAdapter != null) {
+                    mMovieGridAdapter.setData(movies);
                 }
-            });
+                mMovies = new ArrayList<>();
+                mMovies.addAll(movies);
+            }
+        }
+    }
+
+    public class FetchFavoriteMoviesTask extends AsyncTask<Void, Void, List<MovieDetails>> {
+
+        private Context mContext;
+
+        public FetchFavoriteMoviesTask(Context context) {
+            mContext = context;
+        }
+
+        private List<MovieDetails> getFavoriteMoviesDataFromCursor(Cursor cursor) {
+            List<MovieDetails> results = new ArrayList<>();
+            if (cursor != null && cursor.moveToFirst()) {
+                do {
+                    MovieDetails movieDetails = new MovieDetails(cursor);
+                    results.add(movieDetails);
+                } while (cursor.moveToNext());
+                cursor.close();
+            }
+            return results;
+        }
+
+        @Override
+        protected List<MovieDetails> doInBackground(Void... params) {
+            Cursor cursor = mContext.getContentResolver().query(
+                    MovieContract.MovieEntry.CONTENT_URI,
+                    MOVIE_COLUMNS,
+                    null,
+                    null,
+                    null
+            );
+            return getFavoriteMoviesDataFromCursor(cursor);
+        }
+
+        @Override
+        protected void onPostExecute(List<MovieDetails> movies) {
+            if (movies != null) {
+                if (mMovieGridAdapter != null) {
+                    mMovieGridAdapter.setData(movies);
+                }
+                mMovies = new ArrayList<>();
+                mMovies.addAll(movies);
+            }
         }
     }
 }

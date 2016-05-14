@@ -31,14 +31,10 @@
                 android:value="com.cosmos.moviemeter.MainActivity" />
         </activity>
 
-        <activity
-            android:name=".SettingsActivity"
-            android:label="@string/title_activity_settings"
-            android:parentActivityName=".MainActivity" >
-            <meta-data
-                android:name="android.support.PARENT_ACTIVITY"
-                android:value="com.cosmos.moviemeter.MainActivity" />
-        </activity>
+        <provider
+            android:authorities="com.cosmos.moviemeter"
+            android:name=".MovieProvider"
+            android:exported="false" />
 
     </application>
 

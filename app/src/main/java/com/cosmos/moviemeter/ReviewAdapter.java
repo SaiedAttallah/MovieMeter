@@ -1,30 +1,27 @@
 package com.cosmos.moviemeter;
 
 import android.content.Context;
+import android.text.Html;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.BaseAdapter;
-import android.widget.ImageView;
 import android.widget.TextView;
-
-import com.bumptech.glide.Glide;
 
 import java.util.List;
 
 /**
- * Created by Saied Attallah on 4/22/2016.
+ * Created by Saied Attallah on 4/23/2016.
  */
-public class ImageAdapter extends BaseAdapter {
+public class ReviewAdapter extends BaseAdapter {
 
     private final Context mContext;
     private final LayoutInflater mInflater;
+    private final ReviewDetails mLock = new ReviewDetails();
 
-    private final MovieDetails mLock = new MovieDetails();
+    private List<ReviewDetails> mObjects;
 
-    private List<MovieDetails> mObjects;
-
-    public ImageAdapter(Context context, List<MovieDetails> objects) {
+    public ReviewAdapter(Context context, List<ReviewDetails> objects) {
         mContext = context;
         mInflater = (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
         mObjects = objects;
@@ -34,7 +31,7 @@ public class ImageAdapter extends BaseAdapter {
         return mContext;
     }
 
-    public void add(MovieDetails object) {
+    public void add(ReviewDetails object) {
         synchronized (mLock) {
             mObjects.add(object);
         }
@@ -48,20 +45,13 @@ public class ImageAdapter extends BaseAdapter {
         notifyDataSetChanged();
     }
 
-    public void setData(List<MovieDetails> data) {
-        clear();
-        for (MovieDetails movie : data) {
-            add(movie);
-        }
-    }
-
     @Override
     public int getCount() {
         return mObjects.size();
     }
 
     @Override
-    public MovieDetails getItem(int position) {
+    public ReviewDetails getItem(int position) {
         return mObjects.get(position);
     }
 
@@ -76,30 +66,29 @@ public class ImageAdapter extends BaseAdapter {
         ViewHolder viewHolder;
 
         if (view == null) {
-            view = mInflater.inflate(R.layout.movie_image_view, parent, false);
+            view = mInflater.inflate(R.layout.review_item, parent, false);
             viewHolder = new ViewHolder(view);
             view.setTag(viewHolder);
         }
 
-        final MovieDetails movieDetails = getItem(position);
-
-        String image_url = "http://image.tmdb.org/t/p/w185" + movieDetails.getImage();
+        final ReviewDetails reviewDetails = getItem(position);
 
         viewHolder = (ViewHolder) view.getTag();
 
-        Glide.with(getContext()).load(image_url).into(viewHolder.imageView);
-        viewHolder.titleView.setText(movieDetails.getTitle());
+        viewHolder.authorView.setText(reviewDetails.getAuthor());
+        viewHolder.contentView.setText(Html.fromHtml(reviewDetails.getContent()));
 
         return view;
     }
 
     public static class ViewHolder {
-        public final ImageView imageView;
-        public final TextView titleView;
+        public final TextView authorView;
+        public final TextView contentView;
 
         public ViewHolder(View view) {
-            imageView = (ImageView) view.findViewById(R.id.grid_item_image);
-            titleView = (TextView) view.findViewById(R.id.grid_item_title);
+            authorView = (TextView) view.findViewById(R.id.review_author);
+            contentView = (TextView) view.findViewById(R.id.review_content);
         }
     }
+
 }

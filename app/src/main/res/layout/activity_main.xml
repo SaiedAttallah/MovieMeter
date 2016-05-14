@@ -4,9 +4,9 @@
     android:orientation="vertical"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:id="@+id/container"
+    android:id="@+id/activity_main_layout"
     android:name="com.cosmos.moviemeter.MoviesFragment"
-    android:background="#4052b5"
     android:layout_gravity="center"
+    tools:layout="@layout/fragment_movies"
     tools:context="com.cosmos.moviemeter.MainActivity">
 </fragment>
